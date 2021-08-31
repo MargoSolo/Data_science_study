@@ -1,0 +1,160 @@
+---
+title: "Assumptions for parametric tests"
+author: "Dr Juan H Klopper"
+output:
+  html_document:
+    toc: true
+    number_sections: false
+---
+
+<style type="text/css">
+h1 {color:#1a2451;}
+h2 {color:#ffbd4a;}
+h3 {color:#1a2451;}
+</style>
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd(getwd())
+```
+
+![](KRG_elegant_logo_for_light_BG.png)
+
+## Introduction
+
+In the last chapter, we learned that the use of parametric tests for numerical variable comparisons (such as Students _t_ test) is ubiquitous.  In _most_ cases, it is also robust.  It will detect differences despite the distribution of the data point values used.  Robustness is not guaranteed and, in fact, assumptions underlie the use of these tests.  This means that we cannot always use these tests.  The assumptions must be met before we can use them.   Checking for these assumptions can be tedious, so much so that some researchers ignore them and simply always use parametric tests.    This is wrong,  It is important to be aware of the assumptions and to test them before the final decision to use parametric tests is made.
+
+What are these assumptions, then?  Below follows a short description of four of the most important assumptions.  We will see that when some of them are not met, we use alternative forms of parametetric tests and is some cases we move on to nonparametric tests.
+
+## Assumptions for the use of parametric tests
+
+### Normal distribution
+
+Perhaps most important is the fact that the data point values for the variable must be normally distributed in the underlying population.  In regression analysis and in general linear models, it is the errors (residuals) that need to be normally distributed.
+
+Unfortunetaly, we do not have access to the data for the whole population.  Therefor, we make use of tests to investigate the sample data and make inference with respect to the distribution in the population.
+
+If this assumption is not met, it is important to use nonparametric alternatives.
+
+### Homogeneity of variance
+
+This refers to the need for a similarity in the variance throughout the data.  This means that the variable in the populations from which the samples were taken have a similar variance in these populations.  In the case of regression, the variance of one variable should be the same as all the other variables.
+
+We already met Levene's test that can be used to test this assumption.  We use the unequal variance _t_ test when comparing two groups with unequal variances.  Nonparametric tests can also be considered.
+
+### Variable data type
+
+It is obvious that the data point values should be for a numerical variable and measured at this level.  We should not use _t_ tests and analysis of variance for ordinal categorical variables even if expressed as numbers.
+
+### Independence
+
+Data point values for variables for different groups should be independent of each other.  In regression analysis, the errors should likewise be independent.
+
+Now that we have a better idea of the assumptions that parametric test use demands, we take a closer look at the first two assumptions.  Violating the first assumption must lead to the use of non-parametric tests and violating the latter should lead to the use of modifed _t_ tests.
+
+## The assumption of normality
+
+This assumption is arguably of most importance.  It can be checked visually or numerically.  Histograms and quantile-quantile (QQ) plots serve as visual markers and various statistical tests, such as the Shapiro-Wilk test, serve as numerical tests.
+
+### Visual tests
+
+In the code below, 100 data point values for a variable named `hb` is created.  The values are taken from a normal distribution with a mean of 15 and a standard deviation of 3.  A histogram with the default bin size is created so as to visualize the frequency distribution of the data.  A kernel density estimate is provided using the `lines()` command.
+
+```{r Creating and plotting normal data}
+set.seed(123)  # Seeding the pseudo random number generator to ensure reproducible values
+hb <- rnorm(100,  # On hundred values from a normal distrbution
+            mean = 15,  # Mean of 15
+            sd = 3)  # Standard deviationof three
+hist(hb, prob = TRUE, main = "Histogram of hemoglobin values", las = 1, xlab = "Hemoglobin")
+lines(density(hb))  # A density plot line
+```
+
+From the plot above, it seems obvious that the data are normally distributed.  The QQ plot below plots the sample quantile of each data point value against its theoretical quantile.  A line is added for clarity.  The closer the data point values follow the line, the more likely that our assumption has been met, i.e. the data comes from a population in which the variable is normally distributed.
+
+
+```{r A QQ plot of the normal data}
+qqnorm(hb, main = "QQ plot of hemoglobin values")
+qqline(hb)
+```
+
+The next computer variable is named `crp` and takes on a gamma distribution.  Once again, $100$ data point values are created.  Following this is the accompanying histogram and QQ plot.
+
+```{r One hundred random values from a gamma distribution}
+set.seed(123)
+crp = rgamma(100, 2, 2)
+```
+
+```{r Plotting the data}
+hist(crp,
+     prob = TRUE,
+     main = "Histogram of c-reactive protein values",
+     las = 1,
+     xlab = "CRP",
+     ylim = c(0, 0.9))
+lines(density(crp))
+```
+
+It is clear that the data point values are not normally distributed.  A QQ plot will see the markers __NOT__ follow the straight line.
+
+```{r QQ plot of crp}
+qqnorm(crp, main = "QQ plot of CRP values")
+qqline(crp)
+```
+
+As expected, the visual indication is that the assumption of normality is not met.
+
+### Numerical tests
+
+Simply describing the data point values of a variable can give a good understanding of the underlying distribution.  The `summary()` function returns the basic descriptive statistics, including the minimum, maximum, and the quartile values.
+
+```{r Summary statistics of hb}
+summary(hb)
+```
+
+If the mean of the data point values is approximately the same as the median value, it can be an indication of the normality of the data.
+
+```{r Average  and median of hb}
+mean(hb)
+median(hb)
+```
+
+The Shapiro-Wilk test is often used to test for normality.  The null hypothesis of this test states that the data point values from our samples are for a variable which is normally distributed in the population from which they were taken.  The alternative hypothesis states that the underlying population distribution is not normal.  Below the `hb` and `crp` variables are passed as argument to the `shapito.test()` command, resulting in the same test statistic and *p* value as above.
+
+```{r Shapiro Wilk tests for the two variables}
+shapiro.test(hb)
+shapiro.test(crp)
+```
+
+The `crp` list of values is certainly not from a population in which the variable is normally distributed.
+
+## The assumption of homogeneity of variance
+
+The Levene test is used to test for homogeneity of variance.  The null hypothesis states equality of variances.  In order to conduct Levene's test, the _Companion to Applied Regression_, `car`, package is required.  We used this function in the chapter on parametric comparison of means.
+
+The `leveneTest()` command requires the use of a `data.frame` object.  The code below imports a `csv` file and prints the first six rows and a summary to the screen.
+
+```{r Importing a data file}
+df = read.csv(file = "ProjectIIData.csv", header = TRUE)
+head(df)
+```
+
+Note that there are two variables, namely `CRP` and `Group`.  The first variable is ratio-type numerical and the second is nominal categorical (a `factor` in `R`).  The `leveneTest()` function requires specification of a factor by which to group the numerical variable under consideration.  The third argument used in the function is `center =` and can take the value `median` (default) or `mean`.  We are interested in the mean.  Using the median creates the Brown-Forsythe test for variances.
+
+The code below imports the `car` package and runs the Levene test.
+
+```{r Levene test}
+library(car)
+leveneTest(df$CRP, df$Group, center = mean)
+```
+
+The _p_ value is less more the usually chosen $\alpha$ value of 0.05.  The null hypothesis is not rejected and the variances are accepted as being equal, allowing for the use of Student's _t_ test.
+
+## Conclusion
+
+Testing the assumptions for the use of parametric tests can seem laborious, but is an essential requirement in data analysis.
+
+
+Written by Dr Juan H Klopper  
+http://www.juanklopper.com  
+YouTube https://www.youtube.com/jhklopper  
+Twitter @docjuank
